@@ -15,12 +15,12 @@ SENTITEMS="$BASEDIR/output/sentitems.txt"
 MAILTMP="$BASEDIR/output/mail.tmp"
 
 # Get the feed, remove crap and the empty line at the end
-wget -qO- -T 15 -t 3 -–no-check-certificate $RSS_URL | xmlstarlet sel -t -m //channel/item -v "link" -o " %#%#%#%#%" -v "title" -n | \
+wget -qO- -T 15 -t 3 --no-check-certificate "$RSS_URL" | xmlstarlet sel -t -m //channel/item -v "link" -o " %#%#%#%#%" -v "title" -n | \
 sed 's/ via .*//' | sed 's/ sent.*//' | sed 's/%#%#%#%#%.*from //g' | sed '/^$/d'> $NEWITEMS
 
 # Check if feed download was successful
 if ! egrep -q -i "www.reddit.com/r/|www.reddit.com/message/messages/" $NEWITEMS ; then
-	exit
+	exit 1
 fi
 
 # If it's the first time, we don't want to spam our inbox
@@ -39,8 +39,9 @@ while IFS= read -r LINE; do
 		echo "$user has sent you a message:" >> $MAILTMP
 		echo >> $MAILTMP
 		echo "$url" >> $MAILTMP
-		mail -a "From: $FROMMAIL" -s "Message from $user on reddit" $MAIL < $MAILTMP
+		mail -s "Message from $user on reddit" $MAIL -- -f "From: $FROMMAIL" < $MAILTMP
 		# Add it to the log
 		echo $url $user >> $SENTITEMS
+        rm "$MAILTMP"
 	fi
 done < $NEWITEMS
